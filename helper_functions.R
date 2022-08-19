@@ -1,3 +1,12 @@
+#' Collect temperature from sensors
+#' 
+#' This functions collects CPU temperature using `Linux` command `sensors`
+#'
+#' @param fn string, name of `bash` executable
+#' @param val logical, record output value into `R` variable
+#'
+#' @return data.frame
+#' @export
 collect_temperature <- function(fn, val){
   com <- paste0('bash ', fn)
   res <- system(command = com, intern = val)
@@ -21,7 +30,8 @@ collect_temperature <- function(fn, val){
     }
   )
   
+  out_df <- data.frame(matrix(unlist(t_data), ncol = length(t_data)))
+  colnames(out_df) <- c('t_main', 't1', 't2', 't3', 't4')
   
+  return(out_df)
 }
-
-
