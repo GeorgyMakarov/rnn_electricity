@@ -1,87 +1,57 @@
-source('helper_functions.R')
+# 4. launch from bash script
+# 5. collect temperature, cpu load from bash scripts
+# 6. observations = (8 hours * 60 times per hour) * (1 month * 30 days) = 14400
+# ps -C rsession -o %cpu,%mem
 
-# Define general parameters
-total_cycles       <- 1 * (24 * 60 / 8)
-series             <- readRDS('series_length.rds')
-log_program        <- readRDS('log_warehouse.rds')
-accumulated_cycles <- 0
-series_seed        <- 123
-serie_id           <- 1
-report_columns     <- readRDS('report_columns.rds')
-sim_results        <- data.frame()
 
-while (accumulated_cycles < total_cycles){
+# Helper function --------------------------------------------------------------
+
+compute_output <- function(log_diams, log_outs, try_seed, k_seed){
   
-  print(paste0('Computing series: ', serie_id))
+  # Convert arguments to numeric to be able to use in computations
+  try_seed <- as.numeric(try_seed)
+  k_seed   <- as.numeric(k_seed)
   
-  # Set up general parameters
-  set.seed(series_seed)
-  s_length <- sample(series, 1)
-  s_log    <- log_program[sample(nrow(log_program), 1), ]
+  # Compute log volume in sq. mm allows to prepare matrix size
+  set.seed(try_seed)
+  log_inp <- sample(log_diams, 1)
+  log_vol <- round(3.14 * ((log_inp / 2) ^ 2) * 60, -3)
   
-  # Simulate one series
-  s_report  <- as.data.frame(matrix(NA, nrow = s_length, ncol = 12))
-  colnames(s_report) <- report_columns
+  # Find possible output combination allows to compute ncol and nrow of a matrix
+  tmp <- which(as.logical(lapply(log_outs, function(i){log_vol %% i == 0})))
+  set.seed(try_seed + k_seed)
+  side_a <- log_outs[sample(tmp, 1)]
+  side_b <- round(log_vol / side_a, 0)
+  size_m <- side_a * side_b
   
-  s_report$series_id <- serie_id
-  s_report$log_id    <- 1:s_length
-  s_report$log_diam  <- s_log[, 1]
-  s_report$sleep_t   <- 0
+  # Compute result output
+  set.seed(try_seed)
+  z <- abs(rnorm(size_m))
+  a <- matrix(z, nrow = side_a, ncol = side_b)
+  b <- matrix(z, nrow = side_b, ncol = side_a)
+  m <- round(round(sum(a %*% b), 0) / 1000000, 3)
   
-  acc_cycle <- 0
+  # Return log diam, result output
+  res <- list('res_vol' = m, 'log_diam' = log_inp)
   
-  for (i in 1:s_length){
-    
-    print(paste0('-- Simulation of cycle:', i))
-    
-    start_time <- Sys.time()
-    
-    # Main operation cycle
-    a <- matrix(abs(rnorm(s_log[, 1])), ncol = s_log[, 2], nrow = s_log[, 3])
-    b <- matrix(abs(rnorm(s_log[, 1])), ncol = s_log[, 3], nrow = s_log[, 2])
-    result    <- round(sum(a %*% b), 2)
-    temper    <- collect_temperature(fn = 'collect_temp.sh', val = T)
-    set.seed(series_seed + i)
-    sleep_t   <- rnorm(1, mean = 2, sd = 0.2)
-    Sys.sleep(sleep_t)
-    acc_cycle <- acc_cycle + 1
-    sleep_t   <- round(sleep_t * 100 / 60, 3)
-    
-    stop_time <- Sys.time()
-    duration  <- round((stop_time - start_time) * 100 / 60, 3) + 0.5
-    
-    # Write output
-    s_report$result[i]     <- result
-    s_report$t_main[i]     <- temper$t_main
-    s_report$t1[i]         <- temper$t1
-    s_report$t2[i]         <- temper$t2
-    s_report$t3[i]         <- temper$t3
-    s_report$t4[i]         <- temper$t4
-    s_report$sleep_t[i]    <- sleep_t
-    s_report$acc_cycle[i]  <- acc_cycle
-    s_report$duration[i]   <- duration
-    
-    # Clean up after execution
-    rm(i, a, b, result, temper, sleep_t, duration, start_time, 
-       stop_time)
-  }
-  
-  sim_results <- rbind(sim_results, s_report)
-  
-  # Update general parameters to be used for the next cycle
-  accumulated_cycles <- accumulated_cycles + s_length
-  series_seed        <- series_seed + 1
-  serie_id           <- serie_id    + 1
-  
-  Sys.sleep(10)
+  return(res)
 }
 
 
+# Main process code ------------------------------------------------------------
 
+args   <- commandArgs(trailingOnly = T)
+try_s  <- args[1]
+k_s    <- args[2]
 
+log_d <- seq(12, 70, 0.5) ## constant dictionary
+log_o <- seq(40, 225, 5)  ## constant dictionary
 
+sys_out <- system.time(res <- compute_output(log_d, log_o, try_s, k_s))[3]
+res_vol <- res[['res_vol']]
+log_dia <- res[['log_diam']]
 
+sys_out <- as.numeric(sys_out) ## to eliminate names
 
-
-
-
+out_res <- c(sys_out, res_vol, log_dia)
+out_res
