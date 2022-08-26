@@ -1,7 +1,5 @@
-# 4. launch from bash script
-# 5. collect temperature, cpu load from bash scripts
-# 6. observations = (8 hours * 60 times per hour) * (1 month * 30 days) = 14400
-# ps -C rsession -o %cpu,%mem
+# Simulate sawmill process
+# observations = (8 hours * 60 times per hour) * (1 month * 30 days) = 14400
 
 
 # Helper function --------------------------------------------------------------
@@ -54,4 +52,4 @@ log_dia <- res[['log_diam']]
 sys_out <- as.numeric(sys_out) ## to eliminate names
 
 out_res <- c(sys_out, res_vol, log_dia)
-out_res
+print(out_res)

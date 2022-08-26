@@ -8,14 +8,20 @@
 # cpu usage before script
 # cpu usage after script
 
-# NB!: I might need to collect R command from 'top' process COMMAND column
-# to identify the R related load only
-
 # Assign arguments and constants
 try_seed=123
 k_seed=321
-n_iters=`seq 20`
+n_iters=`seq 10`
 cpu_max=100.0
+raw_data="raw_data.txt"
+
+# Create output file
+if [ -e $raw_data ]; then
+        rm $raw_data
+        echo "removing existing raw data file"
+fi
+
+touch $raw_data
 
 # Run main process and collect output data
 for i in $n_iters
@@ -23,6 +29,7 @@ do
         # Collect cpu usage before script execution
         cpu_idle=`top -b -n 1 | grep Cpu | awk '{print $8}'| cut -f 1 -d "." | sed 's/,/\./'`
         cpu_usage_before=$(echo $cpu_max - $cpu_idle | bc -l)
+        cpu_usage_before=$(echo $cpu_usage_before + 0.0 | bc -l)
 
         # Run Rscript process sim allows CPU temp to change over load
         # Result -- elapsed time, volume, log diam
@@ -49,10 +56,20 @@ do
         # Collect cpu usage after script execution
         cpu_idle=`top -b -n 1 | grep Cpu | awk '{print $8}'| cut -f 1 -d "." | sed 's/,/\./'`
         cpu_usage_after=$(echo $cpu_max - $cpu_idle | bc -l)
+        cpu_usage_after=$(echo $cpu_usage_after + 0.0 | bc -l)
 
         # Append result with cpu usage
         result="${result} ${cpu_usage_before} ${cpu_usage_after}"
-        echo $result
+        echo $result >> $raw_data      
+
+        if (( $i % 5 == 0 ));
+        then
+                msg="simulation step"
+                msg="$msg $i"
+                time_stamp=`date`
+                msg="$msg $time_stamp"
+                echo $msg
+        fi
 
 done
 
