@@ -6,9 +6,8 @@ try_seed=123
 k_seed=321
 cpu_max=100.0
 raw_data="raw_data.txt"
-num_est='^[0-9]+$'
 
-if [ -e $raw_dadta ]; then
+if [ -e $raw_data ]; then
   rm $raw_data
 fi
 
