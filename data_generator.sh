@@ -1,7 +1,7 @@
 #!/bin/bash
 
-n_iter=`seq 100`
-count_step=10
+n_iter=`seq 1000`
+count_step=100
 try_seed=123
 k_seed=321
 cpu_max=100.0
